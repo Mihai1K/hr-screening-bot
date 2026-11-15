@@ -1,0 +1,32 @@
+# Имя проекта закреплено намеренно.
+# Compose по умолчанию берёт имя из названия папки, а её видно по-разному:
+# из "HR найм" получалось "hr", через симлинк ~/hr-bot — "hr-bot".
+# Из-за этого compose однажды попытался создать ВТОРОЙ пустой том вместо того,
+# чтобы поднять контейнер с реальными данными. Теперь имя всегда "hr".
+name: hr
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hr_bot_db
+    # always, а не unless-stopped: unless-stopped не поднимает контейнер,
+    # который был остановлен явно (например, при выходе из Docker Desktop) —
+    # из-за этого база пролежала три недели.
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: hr_bot
+    # 5433 снаружи, чтобы не конфликтовать с локальным Postgres, если он появится
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hr_bot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
